@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>网页版随机点名器</title>
+    <style>
+        body {
+            font-family: '微软雅黑', Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #f0f3f9;
+        }
+
+        .drop-zone {
+            border: 3px dashed #4a90e2;
+            border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            background-color: #fff;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .drop-zone:hover {
+            background-color: #f8f9ff;
+            transform: scale(1.02);
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        input[type="number"] {
+            padding: 8px;
+            border: 2px solid #4a90e2;
+            border-radius: 5px;
+            width: 120px;
+        }
+
+        button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 5px;
+            background: #4a90e2;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #357abd;
+        }
+
+        button:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+
+        #result {
+            font-size: 24px;
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            min-height: 100px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+            animation: glow 1.5s infinite alternate;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 5px #4a90e233; }
+            to { box-shadow: 0 0 15px #4a90e266; }
+        }
+
+        .file-input {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <h2 style="color: #2c3e50; text-align: center;">随机点名器</h2>
+    
+    <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+        <p>点击选择或拖拽名字文件到此区域 (.txt)</p>
+        <input type="file" id="fileInput" class="file-input" accept=".txt">
+    </div>
+
+    <div class="controls">
+        <div>
+            <label>选择人数：</label>
+            <input type="number" id="selectNum" min="1" value="1">
+        </div>
+        <button onclick="start()" id="startBtn">开始</button>
+        <button onclick="stop()" id="stopBtn" disabled>停止</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        let names = [];
+        let intervalId = null;
+        let isRunning = false;
+        const resultDiv = document.getElementById('result');
+
+        // 文件拖放处理
+        document.addEventListener('DOMContentLoaded', () => {
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            // 拖放事件处理
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.style.backgroundColor = '#e8f0fe';
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.style.backgroundColor = '#fff';
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.style.backgroundColor = '#fff';
+                handleFile(e.dataTransfer.files[0]);
+            });
+
+            // 文件选择处理
+            fileInput.addEventListener('change', (e) => {
+                handleFile(e.target.files[0]);
+            });
+        });
+
+        function handleFile(file) {
+            if (!file || file.type !== 'text/plain') {
+                alert('请选择有效的文本文件 (.txt)');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                names = e.target.result.split('\n')
+                    .map(name => name.trim())
+                    .filter(name => name);
+                
+                if (names.length === 0) {
+                    alert('文件内容为空或格式不正确');
+                    return;
+                }
+
+                document.getElementById('selectNum').max = names.length;
+                document.getElementById('selectNum').value = Math.min(1, names.length);
+                document.getElementById('dropZone').innerHTML = 
+                    `<p>已加载文件：${file.name}<br>共 ${names.length} 个名字</p>`;
+            };
+            reader.readAsText(file);
+        }
+
+        function start() {
+            if (names.length === 0) {
+                alert('请先选择包含名字的文件');
+                return;
+            }
+
+            const selectNum = parseInt(document.getElementById('selectNum').value);
+            if (isNaN(selectNum) || selectNum < 1 || selectNum > names.length) {
+                alert('请输入有效的选择人数');
+                return;
+            }
+
+            isRunning = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+
+            intervalId = setInterval(() => {
+                const selected = [];
+                const tempNames = [...names];
+                
+                for (let i = 0; i < selectNum; i++) {
+                    const index = Math.floor(Math.random() * tempNames.length);
+                    selected.push(tempNames.splice(index, 1)[0]);
+                }
+
+                resultDiv.innerHTML = selected.join('<br>');
+                resultDiv.style.animation = 'glow 0.8s infinite alternate';
+            }, 100);
+        }
+
+        function stop() {
+            isRunning = false;
+            clearInterval(intervalId);
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            resultDiv.style.animation = '';
+        }
+    </script>
+</body>
+</html>
