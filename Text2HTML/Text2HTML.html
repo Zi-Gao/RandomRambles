@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML转义工具</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            resize: vertical;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .result {
+            border: 1px solid #ddd;
+            padding: 15px;
+            background-color: #f9f9f9;
+            white-space: pre-wrap;
+            min-height: 100px;
+        }
+        .copy-btn {
+            background-color: #2196F3;
+            margin-top: 10px;
+        }
+        .copy-btn:hover {
+            background-color: #0b7dda;
+        }
+    </style>
+</head>
+<body>
+    <h1>HTML转义工具</h1>
+    <div class="container">
+        <textarea id="inputText" placeholder="请输入要转义的文章内容"></textarea>
+        <button id="copyBtn" class="copy-btn">复制结果</button>
+    </div>
+
+    <script>
+        document.getElementById('copyBtn').addEventListener('click', function() {
+            const inputText = document.getElementById('inputText').value;
+            const escapedText = escapeHtml(inputText);
+            navigator.clipboard.writeText(escapedText).then(() => {
+                alert('已复制到剪贴板！');
+            }).catch(err => {
+                console.error('复制失败: ', err);
+            });
+        });
+
+        function escapeHtml(text) {
+            // // 然后转义其他HTML特殊字符
+            const escapeMap = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            };
+            // // 先处理换行符
+            let result = text.replace(/[&<>"']/g, function(match) {
+                return escapeMap[match];
+            }); 
+            result=result.replace(/\r?\n/g, '<br>');
+            
+            
+            return result;
+        }
+    </script>
+</body>
+</html>
