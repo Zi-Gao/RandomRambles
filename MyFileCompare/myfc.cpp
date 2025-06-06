@@ -2,74 +2,82 @@
 #include <fstream>
 #include <string>
 #include <algorithm>
-#include <cctype>
+using namespace std;
 
-// 去除字符串右侧的空格和制表符
-std::string rtrim(const std::string &s) {
-    auto end = std::find_if_not(s.rbegin(), s.rend(), [](int ch) {
-        return std::isspace(ch);
-    });
-    return std::string(s.begin(), end.base());
-}
-
-// 比较两个文件，忽略行末空格和文件末尾多余的空行
-bool compareFiles(const std::string& file1, const std::string& file2) {
-    std::ifstream f1(file1), f2(file2);
-    if (!f1.is_open() || !f2.is_open()) {
-        std::cerr << "无法打开文件" << std::endl;
-        return false;
-    }
-
-    std::string line1, line2;
-    bool hasMore1, hasMore2;
-
-    while (true) {
-        // 读取文件1的一行（跳过空行）
-        hasMore1 = false;
-        while (std::getline(f1, line1)) {
-            line1 = rtrim(line1);
-            if (!line1.empty()) {
-                hasMore1 = true;
-                break;
-            }
-        }
-
-        // 读取文件2的一行（跳过空行）
-        hasMore2 = false;
-        while (std::getline(f2, line2)) {
-            line2 = rtrim(line2);
-            if (!line2.empty()) {
-                hasMore2 = true;
-                break;
-            }
-        }
-
-        // 检查是否到达文件末尾
-        if (!hasMore1 && !hasMore2) {
-            return true; // 两个文件都结束，内容相同
-        }
-        if (!hasMore1 || !hasMore2) {
-            return false; // 一个文件结束，另一个还有内容
-        }
-
-        // 比较非空行
-        if (line1 != line2) {
-            return false;
-        }
-    }
-}
-
-int main(int argc, char* argv[]) {
+int main(int argc, char *argv[]) {
     if (argc != 3) {
-        std::cerr << "usage: " << argv[0] << " <file1> <file2>" << std::endl;
+        cerr << "Usage: " << argv[0] << " <file1> <file2>" << endl;
         return 1;
     }
 
-    if (compareFiles(argv[1], argv[2])) {
-        std::cout << "ac" << std::endl;
-        return 0;
-    } else {
-        std::cout << "wa" << std::endl;
+    ifstream f1(argv[1]), f2(argv[2]);
+    if (!f1.is_open() || !f2.is_open()) {
+        cerr << "Error opening files" << endl;
         return 1;
+    }
+
+    int row = 1;
+    while (true) {
+        string s1, s2;
+        bool b1 = false, b2 = false;
+
+        if (f1) {
+            if (getline(f1, s1)) {
+                b1 = true;
+                size_t endpos = s1.find_last_not_of(' ');
+                if (endpos != string::npos) s1 = s1.substr(0, endpos + 1);
+                else s1 = "";
+            }
+        }
+
+        if (f2) {
+            if (getline(f2, s2)) {
+                b2 = true;
+                size_t endpos = s2.find_last_not_of(' ');
+                if (endpos != string::npos) s2 = s2.substr(0, endpos + 1);
+                else s2 = "";
+            }
+        }
+
+        if (!b1 && !b2) {
+            cout << "AC" << endl;
+            return 0;
+        }
+
+        if (b1 && !b2) {
+            if (s1.empty()) {
+                row++;
+                continue;
+            } else {
+                cout << row << " " << 1 << endl;
+                return -1;
+            }
+        }
+
+        if (!b1 && b2) {
+            if (s2.empty()) {
+                row++;
+                continue;
+            } else {
+                cout << row << " " << 1 << endl;
+                return -1;
+            }
+        }
+
+        if (s1 != s2) {
+            int len = min(s1.size(), s2.size());
+            int col = 0;
+            for (int i = 0; i < len; i++) {
+                if (s1[i] != s2[i]) {
+                    col = i + 1;
+                    break;
+                }
+            }
+            if (col == 0) col = len + 1;
+            cout << row << " " << col << endl;
+            return -1;
+        }
+
+        row++;
     }
 }
