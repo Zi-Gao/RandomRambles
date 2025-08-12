@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>血氧等效海拔计算器</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background-color: #f4f7f9;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 25px;
+            background-color: #ffffff;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1, h2 {
+            color: #1a237e;
+            text-align: center;
+        }
+        .input-section, .result-section {
+            margin-top: 20px;
+        }
+        .input-group {
+            margin-bottom: 18px;
+        }
+        label {
+            display: block;
+            font-weight: bold;
+            margin-bottom: 5px;
+            color: #3949ab;
+        }
+        input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        #getLocationBtn {
+            background-color: #1e88e5;
+            color: white;
+            flex-grow: 1;
+        }
+        #getLocationBtn:hover {
+            background-color: #1565c0;
+        }
+        #calculateBtn {
+            width: 100%;
+            background-color: #43a047;
+            color: white;
+            margin-top: 10px;
+        }
+        #calculateBtn:hover {
+            background-color: #2e7d32;
+        }
+        #location-status {
+            font-size: 0.9em;
+            color: #666;
+            margin-left: 10px;
+        }
+        #results {
+            display: none;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        #results p {
+            background-color: #e8f5e9;
+            padding: 10px;
+            border-left: 4px solid #4caf50;
+            margin: 10px 0;
+        }
+        #results h2 {
+            font-size: 1.8em;
+            color: #d32f2f;
+            text-align: center;
+        }
+        #results span {
+            font-weight: bold;
+        }
+        .disclaimer {
+            margin-top: 25px;
+            font-size: 0.8em;
+            color: #888;
+            text-align: center;
+            border-top: 1px solid #eee;
+            padding-top: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>血氧等效海拔计算器</h1>
+
+        <div class="input-section">
+            <div class="input-group">
+                <label for="altitude">1. 当前海拔 (米)</label>
+                <div class="button-group">
+                    <input type="number" id="altitude" placeholder="手动输入或点击按钮获取">
+                    <button id="getLocationBtn">自动获取</button>
+                </div>
+                <span id="location-status"></span>
+            </div>
+
+            <div class="input-group">
+                <label for="my-hb">2. 我的血红蛋白 (g/L)</label>
+                <input type="number" id="my-hb" placeholder="例如: 150">
+            </div>
+
+            <div class="input-group">
+                <label for="normal-hb">3. 平原正常人血红蛋白参考值 (g/L)</label>
+                <input type="number" id="normal-hb" value="130">
+            </div>
+
+            <button id="calculateBtn">开始计算</button>
+        </div>
+
+        <div class="result-section" id="results">
+            <h2>计算结果</h2>
+            <p>您输入的当前海拔: <span id="result-altitude"></span> 米</p>
+            <p>该海拔空气相对含氧量: <span id="result-oxygen"></span> % (相当于海平面的百分比)</p>
+            <p>您的等效携氧能力: <span id="result-equivalent-oxygen"></span> % (相当于海平面正常人的百分比)</p>
+            <h2 style="margin-top:20px;">您的等效海拔约为：<br><span id="result-equivalent-altitude"></span> 米</h2>
+        </div>
+
+        <div class="disclaimer">
+            <strong>免责声明：</strong> 本计算器使用标准大气压模型进行估算，结果仅供参考，不能作为专业的医疗、运动或探险建议。血红蛋白对携氧能力的影响是复杂过程，本工具进行了简化处理。
+        </div>
+    </div>
+
+    <script>
+        // --- DOM元素获取 ---
+        const getLocationBtn = document.getElementById('getLocationBtn');
+        const calculateBtn = document.getElementById('calculateBtn');
+        const altitudeInput = document.getElementById('altitude');
+        const myHbInput = document.getElementById('my-hb');
+        const normalHbInput = document.getElementById('normal-hb');
+        const locationStatus = document.getElementById('location-status');
+        const resultsDiv = document.getElementById('results');
+
+        // --- 结果展示元素 ---
+        const resultAltitude = document.getElementById('result-altitude');
+        const resultOxygen = document.getElementById('result-oxygen');
+        const resultEquivalentOxygen = document.getElementById('result-equivalent-oxygen');
+        const resultEquivalentAltitude = document.getElementById('result-equivalent-altitude');
+
+        // --- 事件监听 ---
+
+        // 1. 获取地理位置按钮
+        getLocationBtn.addEventListener('click', () => {
+            if (!navigator.geolocation) {
+                locationStatus.textContent = "您的浏览器不支持地理位置功能。";
+                locationStatus.style.color = 'red';
+                return;
+            }
+
+            locationStatus.textContent = "正在获取海拔...";
+            locationStatus.style.color = '#1e88e5';
+
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    // 检查是否成功获取到海拔信息
+                    if (position.coords.altitude !== null) {
+                        altitudeInput.value = position.coords.altitude.toFixed(0);
+                        locationStatus.textContent = `✅ 海拔获取成功！约 ${altitudeInput.value} 米。`;
+                        locationStatus.style.color = 'green';
+                    } else {
+                        locationStatus.textContent = "无法自动获取海拔，请手动输入。浏览器可能未提供此数据。";
+                        locationStatus.style.color = 'orange';
+                    }
+                },
+                (error) => {
+                    let message = "获取位置失败。";
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            message += " 用户拒绝了位置请求。";
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message += " 位置信息不可用。";
+                            break;
+                        case error.TIMEOUT:
+                            message += " 请求超时。";
+                            break;
+                    }
+                    locationStatus.textContent = message;
+                    locationStatus.style.color = 'red';
+                },
+                {
+                    enableHighAccuracy: true, // 尝试更高精度
+                    timeout: 10000,           // 10秒超时
+                    maximumAge: 0             // 不使用缓存
+                }
+            );
+        });
+
+        // 2. 计算按钮
+        calculateBtn.addEventListener('click', () => {
+            // --- 获取并校验输入 ---
+            const altitude = parseFloat(altitudeInput.value);
+            const myHb = parseFloat(myHbInput.value);
+            const normalHb = parseFloat(normalHbInput.value);
+
+            if (isNaN(altitude) || isNaN(myHb) || isNaN(normalHb)) {
+                alert("请输入所有有效的数字！");
+                return;
+            }
+            if (myHb <= 0 || normalHb <= 0) {
+                alert("血红蛋白数值必须大于0！");
+                return;
+            }
+
+            // --- 核心计算逻辑 ---
+
+            // 公式1: 根据海拔计算相对含氧量
+            // 使用大气压力模型: P = P0 * exp(-h/H)
+            // 其中 H (标高) 约 8500米. 相对含氧量与相对压力成正比。
+            const oxygenRatioAtAltitude = Math.exp(-altitude / 8500);
+
+            // 公式2: 计算考虑血红蛋白后的等效携氧能力
+            // 这是相对于在海平面、拥有正常血红蛋白的人而言的
+            const equivalentOxygenRatio = oxygenRatioAtAltitude * (myHb / normalHb);
+
+            // 公式3: 将等效携氧能力反向转换回海拔
+            // h = -H * ln(P/P0)
+            let equivalentAltitude = -8500 * Math.log(equivalentOxygenRatio);
+
+            // 处理特殊情况：如果等效携氧能力高于海平面正常人，等效海拔会是负数
+            let equivalentAltitudeText;
+            if (equivalentAltitude < 0) {
+                equivalentAltitudeText = `0 (体能储备充足，相当于生活在海平面)`;
+            } else {
+                equivalentAltitudeText = `${equivalentAltitude.toFixed(0)}`;
+            }
+
+            // --- 显示结果 ---
+            resultsDiv.style.display = 'block';
+
+            resultAltitude.textContent = altitude.toFixed(0);
+            resultOxygen.textContent = (oxygenRatioAtAltitude * 100).toFixed(2);
+            resultEquivalentOxygen.textContent = (equivalentOxygenRatio * 100).toFixed(2);
+            resultEquivalentAltitude.textContent = equivalentAltitudeText;
+
+            // 滚动到结果区域，方便查看
+            resultsDiv.scrollIntoView({ behavior: 'smooth' });
+        });
+
+    </script>
+</body>
+</html>
